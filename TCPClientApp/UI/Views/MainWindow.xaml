@@ -1,0 +1,67 @@
+﻿<Window x:Class="TCPClientApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:TCPClientApp.UI.ViewModels"
+        d:DataContext="{d:DesignInstance Type=viewModels:TCPClientViewModel}"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="900"
+        FontSize="12">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="5*" />
+            <ColumnDefinition Width="5*" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="9*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            
+            <Grid Grid.Row="0" >
+                <TextBox Text="{Binding Request}"/>
+            </Grid>
+            
+            <Grid Grid.Row="1" Margin="0 10 0 10">
+                <ListBox ItemsSource="{Binding DirectoryContents}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type viewModels:ListBoxItemViewModel}">
+                            <TextBlock Text="{Binding Header}"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>  
+            </Grid>
+            
+            <Grid Grid.Row="2" Margin="0 0 0 10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="4*" />
+                </Grid.ColumnDefinitions>
+                <Label Content="IP-адрес: " />
+                <TextBox Grid.Column="1" HorizontalAlignment="Stretch" Text="{Binding EndPoint}"/>
+            </Grid>
+
+            <Grid Grid.Row="3" Margin="0 0 0 10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="4*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Padding="20 0" HorizontalAlignment="Left" Content="Соединиться" Command="{Binding ConnectCommand}"/>
+                <Button Grid.Column="1" Padding="20 0" HorizontalAlignment="Center" Content="Отключиться" Command="{Binding DisconnectCommand}"/>
+                <Button Grid.Column="2" Content="Передать серверу" Padding="30 0" HorizontalAlignment="Right" Command="{Binding SendRequestCommand}" />
+            </Grid>
+        </Grid>
+
+        <StackPanel Grid.Column="1" Margin="5 0 5 0">
+            <Label Content="Клиентская сторона" FontSize="16" />
+            <TextBox Height="400" Text="{Binding ClientLog}"/>
+        </StackPanel>
+
+    </Grid>
+</Window>

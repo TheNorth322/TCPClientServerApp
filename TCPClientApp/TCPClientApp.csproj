@@ -8,10 +8,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Data" />
-      <Folder Include="Domain" />
-      <Folder Include="UI\ViewModels" />
-      <Folder Include="UI\Views" />
+      <Page Update="UI\Views\MainWindow.xaml">
+        <Generator>MSBuild:Compile</Generator>
+        <XamlRuntime>Wpf</XamlRuntime>
+        <SubType>Designer</SubType>
+      </Page>
     </ItemGroup>
 
 </Project>

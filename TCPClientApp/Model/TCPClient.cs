@@ -6,40 +6,42 @@ using System.Threading.Tasks;
 
 namespace TCPClientApp.Model;
 
-public class TCPClient : IClient
+public class TCPClient
 {
-    private string _ip;
-    private string _port;
-    private Socket client;
+    private Socket server;
 
-    public async Task ConnectAsync(string ip, string port)
+    public async Task ConnectAsync(string endPoint)
     {
-        IPEndPoint ipEndPoint = IPEndPoint.Parse($"{ip}:{port}");
-        using Socket client =
-            new Socket(ipEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-        await client.ConnectAsync(ipEndPoint);
+        IPEndPoint ipEndPoint = IPEndPoint.Parse(endPoint);
+        Socket socket =
+            new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        server = socket;
+        await server.ConnectAsync(ipEndPoint);
     }
 
     public async Task<string> SendRequestAsync(string message)
     {
-        int bytes;
-        byte[] messageBytes = Encoding.UTF8.GetBytes(message), buffer = new byte[1024];
-        StringBuilder stringBuilder = new StringBuilder();
-        
-        _ = await client.SendAsync(messageBytes, SocketFlags.None);
-        
-        do
+        while (true)
         {
-            bytes = await client.ReceiveAsync(buffer);
-            string response = Encoding.UTF8.GetString(buffer, 0, bytes);
-            stringBuilder.Append(response);
-        } while (bytes > 0);
+            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+            _ = await server.SendAsync(messageBytes, SocketFlags.None);
+            Console.WriteLine($"Socket client sent message: \"{message}\"");
 
-        return stringBuilder.ToString();
+            byte[] buffer = new byte[1_024];
+            int received = await server.ReceiveAsync(buffer, SocketFlags.None);
+            string response = Encoding.UTF8.GetString(buffer, 0, received);
+            if (response.IndexOf("<|EOM|>") > -1)
+            {
+                response.Replace("<|EOM|>", "");
+                Console.WriteLine(
+                    $"Socket client received acknowledgment: \"{response}\"");
+                return response;
+            }
+        }
     }
 
     public void Disconnect()
     {
-        client.Shutdown(SocketShutdown.Both);
+        server.Shutdown(SocketShutdown.Both);
     }
 }
