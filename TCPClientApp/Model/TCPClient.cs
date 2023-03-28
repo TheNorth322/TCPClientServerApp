@@ -10,6 +10,13 @@ public class TCPClient
 {
     private Socket server;
 
+    public bool Connected()
+    {
+        if (server == null || server.Connected == false) 
+            return false;
+        return true;
+    }
+
     public async Task ConnectAsync(string endPoint)
     {
         IPEndPoint ipEndPoint = IPEndPoint.Parse(endPoint);
@@ -32,7 +39,6 @@ public class TCPClient
             string response = Encoding.UTF8.GetString(buffer, 0, received);
             if (response.IndexOf("<|EOM|>") > -1)
             {
-                response.Replace("<|EOM|>", "");
                 Console.WriteLine(
                     $"Socket client received acknowledgment: \"{response}\"");
                 return response;
@@ -43,5 +49,6 @@ public class TCPClient
     public void Disconnect()
     {
         server.Shutdown(SocketShutdown.Both);
+        server.Close();
     }
 }

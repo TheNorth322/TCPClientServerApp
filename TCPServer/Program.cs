@@ -7,10 +7,10 @@ public static class Program
         Run();
     }
 
-    private static async void Run()
+    private static void Run()
     {
         TCPServer tcpServer = new TCPServer();
         while (true)
-            await tcpServer.Connect();
+           tcpServer.Connect();
     }
 }

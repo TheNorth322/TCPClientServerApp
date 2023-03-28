@@ -8,8 +8,8 @@ public class TCPServer
 {
     private string directoryRequestEnding = "type=dirContents";
     private string fileRequestEnding = "type=fileContents";
+    private string fileNameRequestEnding = "type=fileName";
     private RequestAnalyzer _requestAnalyzer;
-
     public TCPServer()
     {
         _requestAnalyzer = new RequestAnalyzer();
@@ -18,11 +18,13 @@ public class TCPServer
     public async Task Connect()
     {
         IPEndPoint ipPoint = new IPEndPoint(IPAddress.Any, 8888);
-        using Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         socket.Bind(ipPoint);
         socket.Listen(100);
         using Socket client = await socket.AcceptAsync();
-        await AcceptRequest(client);
+        Console.WriteLine($"{client.RemoteEndPoint} connected.");
+        while (true)
+            await AcceptRequest(client);
     }
 
     private async Task AcceptRequest(Socket client)
@@ -34,12 +36,12 @@ public class TCPServer
             int received = await client.ReceiveAsync(buffer, SocketFlags.None);
             string request = Encoding.UTF8.GetString(buffer, 0, received);
 
-            if (request.IndexOf("<|EOM|>") > -1)
+            if (request.IndexOf(eom) > -1)
             {
                 Console.WriteLine(
                     $"Socket server received message: \"{request}\"");
                 request = request.Replace(eom, "");
-                string ackMessage = ParseRequest(request) + "<|EOM|>";
+                string ackMessage = ParseRequest(request) + eom;
                 byte[] echoBytes = Encoding.UTF8.GetBytes(ackMessage);
                 await client.SendAsync(echoBytes, 0);
                 Console.WriteLine(
@@ -52,12 +54,14 @@ public class TCPServer
     private string ParseRequest(string request)
     {
         FileAttributes attributes = File.GetAttributes(request);
-
-        if ((attributes & FileAttributes.Directory) == FileAttributes.Directory)
-            return _requestAnalyzer.GetDirectoryFiles(request) + directoryRequestEnding;
-        else if (request == "")
+        Console.WriteLine($"asd{request}");
+        if (request == @"\")
             return _requestAnalyzer.GetLogicalDrives(request) + directoryRequestEnding;
-        else
+        else if ((attributes & FileAttributes.Directory) == FileAttributes.Directory)
+            return _requestAnalyzer.GetDirectoryFiles(request) + directoryRequestEnding;
+        else if (Path.GetExtension(request) != ".txt")
+            return Path.GetFileName(request) + $"|{fileNameRequestEnding}";
+        else;
             return _requestAnalyzer.GetTextFileContents(request) + $"|{fileRequestEnding}";
     }
 }

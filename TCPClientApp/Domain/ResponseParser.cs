@@ -7,11 +7,13 @@ public class ResponseParser
 {
     public Response Parse(string response)
     {
-        response.Replace("<|EOM|>", "");
+        response = response.Replace("<|EOM|>", "");
         string[] parsedResponse = response.Split("|");
         
         if (parsedResponse.Last() == "type=dirContents")
             return new Response(ResponseType.DirectoryContents, RemoveType(parsedResponse));
+        else if (parsedResponse.Last() == "type=fileName")
+            return new Response(ResponseType.FileName, RemoveType(parsedResponse));
         else
             return new Response(ResponseType.FileContents, Join(RemoveType(parsedResponse)));
     }

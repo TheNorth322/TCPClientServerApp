@@ -20,47 +20,66 @@
                 <RowDefinition Height="9*" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            
-            <Grid Grid.Row="0" >
-                <TextBox Text="{Binding Request}"/>
+
+            <Grid Grid.Row="0">
+                <TextBox Text="{Binding Request}" />
             </Grid>
-            
+
             <Grid Grid.Row="1" Margin="0 10 0 10">
-                <ListBox ItemsSource="{Binding DirectoryContents}">
+                <ListBox ItemsSource="{Binding DirectoryContents}" SelectionMode="Single"
+                         SelectedItem="{Binding SelectedListBoxItem}">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type viewModels:ListBoxItemViewModel}">
-                            <TextBlock Text="{Binding Header}"/>
+                            <TextBlock Text="{Binding Header}" />
                         </DataTemplate>
                     </ListBox.ItemTemplate>
-                </ListBox>  
+                </ListBox>
             </Grid>
-            
+
             <Grid Grid.Row="2" Margin="0 0 0 10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*" />
                     <ColumnDefinition Width="4*" />
                 </Grid.ColumnDefinitions>
                 <Label Content="IP-адрес: " />
-                <TextBox Grid.Column="1" HorizontalAlignment="Stretch" Text="{Binding EndPoint}"/>
+                <TextBox Grid.Column="1" HorizontalAlignment="Stretch" Text="{Binding EndPoint}" />
             </Grid>
 
             <Grid Grid.Row="3" Margin="0 0 0 10">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="3*"/>
-                    <ColumnDefinition Width="3*"/>
-                    <ColumnDefinition Width="4*"/>
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="4*" />
                 </Grid.ColumnDefinitions>
 
-                <Button Padding="20 0" HorizontalAlignment="Left" Content="Соединиться" Command="{Binding ConnectCommand}"/>
-                <Button Grid.Column="1" Padding="20 0" HorizontalAlignment="Center" Content="Отключиться" Command="{Binding DisconnectCommand}"/>
-                <Button Grid.Column="2" Content="Передать серверу" Padding="30 0" HorizontalAlignment="Right" Command="{Binding SendRequestCommand}" />
+                <Button Padding="20 0" HorizontalAlignment="Left" Content="Соединиться"
+                        Command="{Binding ConnectCommand}" />
+                <Button Grid.Column="1" Padding="20 0" HorizontalAlignment="Center" Content="Отключиться"
+                        Command="{Binding DisconnectCommand}" />
+                <Button Grid.Column="2" Content="Передать серверу" Padding="30 0" HorizontalAlignment="Right"
+                        Command="{Binding SendRequestCommand}" />
+            </Grid>
+            <Grid Grid.Row="4" Margin="0 0 0 10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="4*" />
+                </Grid.ColumnDefinitions>
+
+                <Button Padding="20 0" HorizontalAlignment="Left" Content="Перейти к дискам"
+                        Command="{Binding GetDisksCommand}" />
+                <Button Grid.Column="1" Padding="20 0" HorizontalAlignment="Center" Content="Назад"
+                        Command="{Binding GoBackCommand}" />
+                <Button Grid.Column="2" Content="Передать серверу" Padding="30 0" HorizontalAlignment="Right"
+                        Command="{Binding SendRequestCommand}" />
             </Grid>
         </Grid>
 
         <StackPanel Grid.Column="1" Margin="5 0 5 0">
             <Label Content="Клиентская сторона" FontSize="16" />
-            <TextBox Height="400" Text="{Binding ClientLog}"/>
+            <TextBox Height="400" Text="{Binding ClientLog}" />
         </StackPanel>
 
     </Grid>
