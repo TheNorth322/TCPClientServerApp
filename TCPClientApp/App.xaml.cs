@@ -17,7 +17,6 @@ namespace TCPClientApp
     {
         protected override void OnStartup(StartupEventArgs e)
         {
-            Console.WriteLine("asdasdasdads");
             MainWindow = new MainWindow();
             MainWindow.Show();
             base.OnStartup(e);

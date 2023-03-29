@@ -6,7 +6,7 @@
         xmlns:viewModels="clr-namespace:TCPClientApp.UI.ViewModels"
         d:DataContext="{d:DesignInstance Type=viewModels:TCPClientViewModel}"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="900"
+        Title="MainWindow" MinHeight="500" MinWidth="900"
         FontSize="12">
     <Grid>
         <Grid.ColumnDefinitions>
@@ -65,22 +65,24 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="3*" />
                     <ColumnDefinition Width="3*" />
-                    <ColumnDefinition Width="4*" />
                 </Grid.ColumnDefinitions>
 
-                <Button Padding="20 0" HorizontalAlignment="Left" Content="Перейти к дискам"
+                <Button Padding="20 0" Style="{StaticResource {x:Type Button}}" HorizontalAlignment="Left" Content="Перейти к дискам"
                         Command="{Binding GetDisksCommand}" />
-                <Button Grid.Column="1" Padding="20 0" HorizontalAlignment="Center" Content="Назад"
+                <Button Grid.Column="1" Padding="20 0" Style="{StaticResource {x:Type Button}}" HorizontalAlignment="Right" Content="Назад"
                         Command="{Binding GoBackCommand}" />
-                <Button Grid.Column="2" Content="Передать серверу" Padding="30 0" HorizontalAlignment="Right"
-                        Command="{Binding SendRequestCommand}" />
             </Grid>
         </Grid>
 
-        <StackPanel Grid.Column="1" Margin="5 0 5 0">
-            <Label Content="Клиентская сторона" FontSize="16" />
-            <TextBox Height="400" Text="{Binding ClientLog}" />
-        </StackPanel>
-
+        <Grid Grid.Column="1" Margin="10 0 10 10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="9*" />
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0" Content="Клиентская сторона" FontSize="16" />
+            <Border Grid.Row="1" BorderThickness="1" BorderBrush="Black">
+                <TextBlock Text="{Binding ClientLog}" />
+            </Border>
+        </Grid>
     </Grid>
 </Window>

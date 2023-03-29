@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using System.Windows;
 using TCPClientApp.Domain;
 using TCPClientApp.Model;
@@ -151,46 +152,6 @@ public class TCPClientViewModel : ViewModelBase
         }
     }
 
-    private void GoBack()
-    {
-        Request = Request.Replace(@$"\{SelectedListBoxItem.Header}", "");
-        _absolutePath = Request;
-    }
-
-    private void Disconnect()
-    {
-        try
-        {
-            socket.Disconnect();
-            ClientLog += $"Client disconnected from: {EndPoint}\n";
-        }
-        catch (Exception ex)
-        {
-            MessageBox_Show(null, ex.Message, "Error occured", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private async void Connect()
-    {
-        try
-        {
-            await socket.ConnectAsync(EndPoint);
-            ClientLog += $"Client connected to: {EndPoint}";
-            GetDisks();
-        }
-        catch (Exception ex)
-        {
-            MessageBox_Show(null, ex.Message, "Error occured", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private void GetDisks()
-    {
-        Request = @"\";
-        SendRequest();
-        Request = "";
-    }
-
     private async void SendRequest()
     {
         try
@@ -214,6 +175,53 @@ public class TCPClientViewModel : ViewModelBase
         {
             MessageBox_Show(null, ex.Message, "Error occured", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void ClearDirectoryContents()
+    {
+        DirectoryContents = new ObservableCollection<ListBoxItemViewModel>();
+    }
+
+    private void Disconnect()
+    {
+        try
+        {
+            socket.Disconnect();
+            ClientLog += $"Client disconnected from: {EndPoint}\n";
+            ClearDirectoryContents();
+            Request = "";
+        }
+        catch (Exception ex)
+        {
+            MessageBox_Show(null, ex.Message, "Error occured", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void Connect()
+    {
+        try
+        {
+            await socket.ConnectAsync(EndPoint);
+            ClientLog += $"Client connected to: {EndPoint}\n";
+            GetDisks();
+        }
+        catch (Exception ex)
+        {
+            MessageBox_Show(null, ex.Message, "Error occured", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void GoBack()
+    {
+        Request = Request.Replace(@$"\{SelectedListBoxItem.Header}", "");
+        _absolutePath = Request;
+    }
+
+    private void GetDisks()
+    {
+        Request = @"\";
+        SendRequest();
+        Request = "";
     }
 
     private void UpdateAbsolutePath()

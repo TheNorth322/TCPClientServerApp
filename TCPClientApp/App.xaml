@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:TCPClientApp">
     <Application.Resources>
-         
+        <Style TargetType="Button" x:Name="ButtonStyle">
+            <Setter Property="MinWidth" Value="80"/>
+        </Style> 
     </Application.Resources>
 </Application>
