@@ -95,7 +95,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _connect ?? new RelayCommand(
                 _execute => Connect(),
-                _canExecute => !socket.Connected()
+                _canExecute => true
             );
         }
     }
@@ -108,7 +108,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _disconnect ?? new RelayCommand(
                 _execute => Disconnect(),
-                _canExecute => socket.Connected()
+                _canExecute => true 
             );
         }
     }
@@ -121,7 +121,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _sendRequest ?? new RelayCommand(
                 _execute => SendRequest(),
-                _canExecute => socket.Connected()
+                _canExecute => true 
             );
         }
     }
@@ -134,7 +134,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _getDisksCommand ?? new RelayCommand(
                 _execute => GetDisks(),
-                _canExecute => socket.Connected()
+                _canExecute => true 
             );
         }
     }
@@ -147,7 +147,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _goBackCommand ?? new RelayCommand(
                 _execute => GoBack(),
-                _canExecute => socket.Connected()
+                _canExecute => true 
             );
         }
     }
@@ -157,7 +157,7 @@ public class TCPClientViewModel : ViewModelBase
         try
         {
             ClientLog += $"Client sent: {Request}\n";
-            string response = await socket.SendRequestAsync(Request + "<|EOM|>");
+            string response = await socket.SendRequestAsync(Request);
             Response parsedResponse = parser.Parse(response);
 
             if (parsedResponse.Type == ResponseType.DirectoryContents)
@@ -217,7 +217,7 @@ public class TCPClientViewModel : ViewModelBase
         _absolutePath = Request;
     }
 
-    private void GetDisks()
+    private async void GetDisks()
     {
         Request = @"\";
         SendRequest();

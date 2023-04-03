@@ -2,15 +2,14 @@
 
 public static class Program
 {
-    public static void Main()
+    public static async Task Main()
     {
-        Run();
+        await Run();
     }
 
-    private static void Run()
+    private static async Task Run()
     {
         TCPServer tcpServer = new TCPServer();
-        while (true)
-           tcpServer.Connect();
+        await tcpServer.Start();
     }
 }

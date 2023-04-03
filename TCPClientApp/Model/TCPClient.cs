@@ -8,11 +8,15 @@ namespace TCPClientApp.Model;
 
 public class TCPClient
 {
-    private Socket server;
+    private TcpClient _clientSocket;
+
+    public TCPClient()
+    {
+    }
 
     public bool Connected()
     {
-        if (server == null || server.Connected == false) 
+        if (_clientSocket == null || _clientSocket.Connected)
             return false;
         return true;
     }
@@ -20,35 +24,36 @@ public class TCPClient
     public async Task ConnectAsync(string endPoint)
     {
         IPEndPoint ipEndPoint = IPEndPoint.Parse(endPoint);
-        Socket socket =
-            new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        server = socket;
-        await server.ConnectAsync(ipEndPoint);
+        _clientSocket = new TcpClient();
+        await _clientSocket.ConnectAsync(ipEndPoint);
     }
 
     public async Task<string> SendRequestAsync(string message)
     {
-        while (true)
+        NetworkStream networkStream = _clientSocket.GetStream();
+        byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+        await networkStream.WriteAsync(messageBytes, 0, messageBytes.Length);
+        await networkStream.FlushAsync();
+        Console.WriteLine($"Socket client sent message: \"{message}\"");
+
+        byte[] buffer = new byte[1_024];
+        StringBuilder response = new StringBuilder();
+        int bytesRead = await networkStream.ReadAsync(buffer, 0, buffer.Length);
+        
+        while (bytesRead > 0)
         {
-            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-            _ = await server.SendAsync(messageBytes, SocketFlags.None);
-            Console.WriteLine($"Socket client sent message: \"{message}\"");
+            response.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
 
-            byte[] buffer = new byte[1_024];
-            int received = await server.ReceiveAsync(buffer, SocketFlags.None);
-            string response = Encoding.UTF8.GetString(buffer, 0, received);
-            if (response.IndexOf("<|EOM|>") > -1)
-            {
-                Console.WriteLine(
-                    $"Socket client received acknowledgment: \"{response}\"");
-                return response;
-            }
+            if (networkStream.DataAvailable == false)
+                break;
+
+            bytesRead = await networkStream.ReadAsync(buffer, 0, buffer.Length);
         }
+
+        Console.WriteLine(
+            $"Socket client received acknowledgment: \"{response}\"");
+        return response.ToString();
     }
 
-    public void Disconnect()
-    {
-        server.Shutdown(SocketShutdown.Both);
-        server.Close();
-    }
+    public void Disconnect() => _clientSocket.Close();
 }
