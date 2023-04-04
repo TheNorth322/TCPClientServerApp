@@ -7,7 +7,6 @@ public class ResponseParser
 {
     public Response Parse(string response)
     {
-        response = response.Replace("<|EOM|>", "");
         string[] parsedResponse = response.Split("|");
         
         if (parsedResponse.Last() == "type=dirContents")

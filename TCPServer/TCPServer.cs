@@ -6,12 +6,6 @@ namespace TCPClientApp.Model;
 
 public class TCPServer
 {
-    public List<ClientHandler> Handlers;
-
-    public TCPServer()
-    {
-        Handlers = new List<ClientHandler>();
-    }
     public async Task Start()
     {
         TcpListener connectionListener = new TcpListener(IPAddress.Any, 8888);
@@ -28,7 +22,6 @@ public class TCPServer
             Console.WriteLine(" >> " + "Client No:" + Convert.ToString(counter) + " started!");
             
             ClientHandler clientHandler = new ClientHandler(clientSocket);
-            Handlers.Append(clientHandler);
             clientHandler.Start();
         }
         

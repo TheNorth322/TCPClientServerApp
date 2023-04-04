@@ -10,10 +10,6 @@ public class TCPClient
 {
     private TcpClient _clientSocket;
 
-    public TCPClient()
-    {
-    }
-
     public bool Connected()
     {
         if (_clientSocket == null || _clientSocket.Connected)
@@ -35,11 +31,16 @@ public class TCPClient
         await networkStream.WriteAsync(messageBytes, 0, messageBytes.Length);
         await networkStream.FlushAsync();
         Console.WriteLine($"Socket client sent message: \"{message}\"");
+        
+        return await GetResponse(networkStream);
+    }
 
+    private async Task<string> GetResponse(NetworkStream networkStream)
+    {
         byte[] buffer = new byte[1_024];
         StringBuilder response = new StringBuilder();
         int bytesRead = await networkStream.ReadAsync(buffer, 0, buffer.Length);
-        
+
         while (bytesRead > 0)
         {
             response.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));

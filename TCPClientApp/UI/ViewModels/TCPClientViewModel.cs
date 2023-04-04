@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using TCPClientApp.Domain;
@@ -13,7 +14,7 @@ public class TCPClientViewModel : ViewModelBase
     private string[] _directories;
 
     private ObservableCollection<ListBoxItemViewModel> _directoryContents;
-
+    private bool _connected;
     private string _endPoint;
     private string _request;
     private TCPClient socket;
@@ -95,7 +96,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _connect ?? new RelayCommand(
                 _execute => Connect(),
-                _canExecute => true
+                _canExecute => !_connected 
             );
         }
     }
@@ -108,7 +109,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _disconnect ?? new RelayCommand(
                 _execute => Disconnect(),
-                _canExecute => true 
+                _canExecute => _connected
             );
         }
     }
@@ -121,7 +122,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _sendRequest ?? new RelayCommand(
                 _execute => SendRequest(),
-                _canExecute => true 
+                _canExecute => _connected 
             );
         }
     }
@@ -134,7 +135,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _getDisksCommand ?? new RelayCommand(
                 _execute => GetDisks(),
-                _canExecute => true 
+                _canExecute => _connected 
             );
         }
     }
@@ -147,7 +148,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _goBackCommand ?? new RelayCommand(
                 _execute => GoBack(),
-                _canExecute => true 
+                _canExecute => _connected 
             );
         }
     }
@@ -187,6 +188,7 @@ public class TCPClientViewModel : ViewModelBase
         try
         {
             socket.Disconnect();
+            _connected = false;
             ClientLog += $"Client disconnected from: {EndPoint}\n";
             ClearDirectoryContents();
             Request = "";
@@ -202,6 +204,7 @@ public class TCPClientViewModel : ViewModelBase
         try
         {
             await socket.ConnectAsync(EndPoint);
+            _connected = true;
             ClientLog += $"Client connected to: {EndPoint}\n";
             GetDisks();
         }
@@ -213,8 +216,19 @@ public class TCPClientViewModel : ViewModelBase
 
     private void GoBack()
     {
-        Request = Request.Replace(@$"\{SelectedListBoxItem.Header}", "");
-        _absolutePath = Request;
+        StringBuilder sb = new StringBuilder(_absolutePath);
+        
+        int startIndex = 0, j;
+        
+        for (j = sb.Length - 1; j >= 0; j--)
+        {
+            if (sb[j] == '\\') 
+                startIndex = j;
+        }
+
+        sb.Remove(startIndex, sb.Length - j);
+        _absolutePath.Remove(startIndex, j);
+        Request = _absolutePath;
     }
 
     private async void GetDisks()
