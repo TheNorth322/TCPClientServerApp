@@ -51,7 +51,7 @@ public class ClientHandler : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            Disconnect();
         }
     }
 

@@ -28,5 +28,4 @@ public class TCPServer
         connectionListener.Stop();
         Console.WriteLine(" >> " + "exit");
     }
-    
 }

@@ -96,11 +96,28 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _connect ?? new RelayCommand(
                 _execute => Connect(),
-                _canExecute => !_connected 
+                _canExecute => !_connected
             );
         }
     }
 
+    private RelayCommand _clearLog;
+
+    public RelayCommand ClearLogCommand
+    {
+        get
+        {
+            return _clearLog ?? new RelayCommand(
+                _execute => ClearLog(),
+                _canExecute => true
+            );
+        }
+    }
+
+    private void ClearLog()
+    {
+        ClientLog = "";
+    }
     private RelayCommand _disconnect;
 
     public RelayCommand DisconnectCommand
@@ -122,7 +139,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _sendRequest ?? new RelayCommand(
                 _execute => SendRequest(),
-                _canExecute => _connected 
+                _canExecute => _connected
             );
         }
     }
@@ -135,7 +152,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _getDisksCommand ?? new RelayCommand(
                 _execute => GetDisks(),
-                _canExecute => _connected 
+                _canExecute => _connected
             );
         }
     }
@@ -148,7 +165,7 @@ public class TCPClientViewModel : ViewModelBase
         {
             return _goBackCommand ?? new RelayCommand(
                 _execute => GoBack(),
-                _canExecute => _connected 
+                _canExecute => _connected
             );
         }
     }
@@ -217,12 +234,12 @@ public class TCPClientViewModel : ViewModelBase
     private void GoBack()
     {
         StringBuilder sb = new StringBuilder(_absolutePath);
-        
+
         int startIndex = 0, j;
-        
+
         for (j = sb.Length - 1; j >= 0; j--)
         {
-            if (sb[j] == '\\') 
+            if (sb[j] == '\\')
                 startIndex = j;
         }
 

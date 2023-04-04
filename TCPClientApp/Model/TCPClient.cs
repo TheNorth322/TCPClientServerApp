@@ -30,7 +30,6 @@ public class TCPClient
         byte[] messageBytes = Encoding.UTF8.GetBytes(message);
         await networkStream.WriteAsync(messageBytes, 0, messageBytes.Length);
         await networkStream.FlushAsync();
-        Console.WriteLine($"Socket client sent message: \"{message}\"");
         
         return await GetResponse(networkStream);
     }
@@ -51,8 +50,6 @@ public class TCPClient
             bytesRead = await networkStream.ReadAsync(buffer, 0, buffer.Length);
         }
 
-        Console.WriteLine(
-            $"Socket client received acknowledgment: \"{response}\"");
         return response.ToString();
     }
 

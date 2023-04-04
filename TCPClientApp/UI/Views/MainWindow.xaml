@@ -4,7 +4,6 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="clr-namespace:TCPClientApp.UI.ViewModels"
-
         d:DataContext="{d:DesignInstance Type=viewModels:TCPClientViewModel}"
         mc:Ignorable="d"
         Title="MainWindow" MinHeight="500" MinWidth="900"
@@ -12,9 +11,9 @@
     <Window.Resources>
         <Style TargetType="Button" x:Key="ButtonStyle">
             <Setter Property="MinWidth" Value="200" />
-            <Setter Property="Height" Value="40"/>
+            <Setter Property="Height" Value="40" />
             <Setter Property="Padding" Value="20 0" />
-            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Center" />
         </Style>
     </Window.Resources>
 
@@ -41,7 +40,13 @@
                          SelectedItem="{Binding SelectedListBoxItem}">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type viewModels:ListBoxItemViewModel}">
-                            <TextBlock Text="{Binding Header}" />
+                            <TextBlock Text="{Binding Header}">
+                                <TextBlock.InputBindings>
+                                    <MouseBinding
+                                        MouseAction="LeftDoubleClick"
+                                        Command="{Binding DataContext.SendRequestCommand, RelativeSource={RelativeSource AncestorType={x:Type ListBox}}}" />
+                                </TextBlock.InputBindings>
+                            </TextBlock>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -73,14 +78,18 @@
                 <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource ButtonStyle}"
                         Content="Отключиться"
                         Command="{Binding DisconnectCommand}" />
-                <Button Grid.Row="0" Grid.Column="2" Style="{StaticResource ButtonStyle}" 
+                <Button Grid.Row="0" Grid.Column="2" Style="{StaticResource ButtonStyle}"
                         Content="Передать серверу"
                         Command="{Binding SendRequestCommand}" />
-                
+
                 <Button Grid.Row="1" Grid.Column="0" Margin="0 10 0 0"
                         Style="{StaticResource ButtonStyle}"
                         Content="Перейти к дискам"
                         Command="{Binding GetDisksCommand}" />
+                <Button Grid.Row="1" Grid.Column="1" Margin="0 10 0 0"
+                        Style="{StaticResource ButtonStyle}"
+                        Content="Очистить лог"
+                        Command="{Binding ClearLogCommand}" />
                 <Button Grid.Row="1" Grid.Column="2" Margin="0 10 0 0"
                         Style="{StaticResource ButtonStyle}"
                         Content="Назад"
@@ -94,7 +103,7 @@
             </Grid.RowDefinitions>
             <Border Grid.Row="0" BorderThickness="1" BorderBrush="Silver">
                 <ScrollViewer>
-                    <TextBlock Text="{Binding ClientLog}" TextWrapping="Wrap" />
+                    <TextBlock Margin="10" Text="{Binding ClientLog}" TextWrapping="Wrap" />
                 </ScrollViewer>
             </Border>
         </Grid>
