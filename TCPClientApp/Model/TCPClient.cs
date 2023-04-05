@@ -10,13 +10,6 @@ public class TCPClient
 {
     private TcpClient _clientSocket;
 
-    public bool Connected()
-    {
-        if (_clientSocket == null || _clientSocket.Connected)
-            return false;
-        return true;
-    }
-
     public async Task ConnectAsync(string endPoint)
     {
         IPEndPoint ipEndPoint = IPEndPoint.Parse(endPoint);

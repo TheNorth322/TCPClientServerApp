@@ -20,9 +20,9 @@ namespace TCPClientApp
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class TcpClientView : Window
     {
-        public MainWindow()
+        public TcpClientView()
         {
             DataContext = new TCPClientViewModel();
             (DataContext as ViewModelBase).MessageBoxRequest += ViewMessageBoxRequest;

@@ -6,12 +6,20 @@ namespace TCPClientApp.Model;
 
 public class TCPServer
 {
+    private ILogger _logger;
+
+    public TCPServer(ILogger logger)
+    {
+        if (logger == null)
+            throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
+    }
     public async Task Start()
     {
         TcpListener connectionListener = new TcpListener(IPAddress.Any, 8888);
         
         connectionListener.Start();
-        Console.WriteLine(" >> " + "Server Started");
+        _logger.Log(" >> Server Started");
 
         int counter = 0;
             
@@ -19,9 +27,9 @@ public class TCPServer
         {
             counter++;
             TcpClient clientSocket = await connectionListener.AcceptTcpClientAsync();
-            Console.WriteLine(" >> " + "Client No:" + Convert.ToString(counter) + " started!");
+            _logger.Log($" >>  Client No: {Convert.ToString(counter)} started!");
             
-            ClientHandler clientHandler = new ClientHandler(clientSocket);
+            ClientHandler clientHandler = new ClientHandler(clientSocket, _logger);
             clientHandler.Start();
         }
         

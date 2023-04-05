@@ -157,19 +157,6 @@ public class TCPClientViewModel : ViewModelBase
         }
     }
 
-    private RelayCommand _goBackCommand;
-
-    public RelayCommand GoBackCommand
-    {
-        get
-        {
-            return _goBackCommand ?? new RelayCommand(
-                _execute => GoBack(),
-                _canExecute => _connected
-            );
-        }
-    }
-
     private async void SendRequest()
     {
         try
@@ -229,23 +216,6 @@ public class TCPClientViewModel : ViewModelBase
         {
             MessageBox_Show(null, ex.Message, "Error occured", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-    }
-
-    private void GoBack()
-    {
-        StringBuilder sb = new StringBuilder(_absolutePath);
-
-        int startIndex = 0, j;
-
-        for (j = sb.Length - 1; j >= 0; j--)
-        {
-            if (sb[j] == '\\')
-                startIndex = j;
-        }
-
-        sb.Remove(startIndex, sb.Length - j);
-        _absolutePath.Remove(startIndex, j);
-        Request = _absolutePath;
     }
 
     private async void GetDisks()

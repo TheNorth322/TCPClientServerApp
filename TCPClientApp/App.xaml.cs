@@ -17,7 +17,7 @@ namespace TCPClientApp
     {
         protected override void OnStartup(StartupEventArgs e)
         {
-            MainWindow = new MainWindow();
+            MainWindow = new TcpClientView();
             MainWindow.Show();
             base.OnStartup(e);
         }

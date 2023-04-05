@@ -13,17 +13,19 @@ public class ClientHandler : IDisposable
 
     private RequestAnalyzer _requestAnalyzer;
     private TcpClient _clientSocket;
-
+    private ILogger _logger;
+    
     public ClientHandler()
     {
         _requestAnalyzer = new RequestAnalyzer();
     }
 
-    public ClientHandler(TcpClient client) : this()
+    public ClientHandler(TcpClient client, ILogger logger) : this()
     {
         if (client == null)
             throw new ArgumentNullException(nameof(client));
         _clientSocket = client;
+        _logger = logger;
     }
 
     public void Start()
@@ -45,8 +47,7 @@ public class ClientHandler : IDisposable
                 await GetRequest(networkStream, buffer, request);
                 await SendResponse(networkStream, request.ToString());
                 
-                Console.WriteLine(
-                    $"Socket server received message: \"{request}\"");
+                    _logger.Log($"Socket server received message: \"{request}\"");
             }
         }
         catch (Exception ex)
@@ -80,8 +81,7 @@ public class ClientHandler : IDisposable
         await networkStream.WriteAsync(responseBytes, 0, responseBytes.Length);
         await networkStream.FlushAsync();
 
-        Console.WriteLine(
-            $"Socket server sent acknowledgment: \"{ackMessage}\"");
+        _logger.Log($"Socket server sent acknowledgment: \"{ackMessage}\"");
     }
 
     private string ParseRequest(string request)
@@ -106,6 +106,7 @@ public class ClientHandler : IDisposable
     private void Disconnect()
     {
         _clientSocket.Close();
+        _logger.Log(" >> Client disconnected");
     }
 
     public void Dispose()

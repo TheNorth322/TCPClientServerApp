@@ -9,7 +9,7 @@ public static class Program
 
     private static async Task Run()
     {
-        TCPServer tcpServer = new TCPServer();
+        TCPServer tcpServer = new TCPServer(new FileAndConsoleLogger("server_log.txt"));
         await tcpServer.Start();
     }
 }
