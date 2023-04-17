@@ -6,15 +6,10 @@ namespace TCPClientApp.Model;
 
 public class ClientHandler : IDisposable
 {
-    private string directoryRequestEnding = "type=dirContents";
-    private string fileRequestEnding = "type=fileContents";
-    private string fileNameRequestEnding = "type=fileName";
-    private string exceptionRequestEnding = "type=exception";
-
     private RequestAnalyzer _requestAnalyzer;
     private TcpClient _clientSocket;
     private ILogger _logger;
-    
+
     public ClientHandler()
     {
         _requestAnalyzer = new RequestAnalyzer();
@@ -46,8 +41,8 @@ public class ClientHandler : IDisposable
 
                 await GetRequest(networkStream, buffer, request);
                 await SendResponse(networkStream, request.ToString());
-                
-                    _logger.Log($"Socket server received message: \"{request}\"");
+
+                _logger.Log($"Socket server received message: \"{request}\"");
             }
         }
         catch (Exception ex)
@@ -58,6 +53,7 @@ public class ClientHandler : IDisposable
 
     private async Task GetRequest(NetworkStream networkStream, byte[] buffer, StringBuilder request)
     {
+        CheckConneciton();
         int bytesRead = await networkStream.ReadAsync(buffer);
         while (bytesRead > 0)
         {
@@ -68,39 +64,26 @@ public class ClientHandler : IDisposable
 
             bytesRead = await networkStream.ReadAsync(buffer, 0, buffer.Length);
         }
-
-        if (request.ToString() == "")
-            Disconnect();
     }
 
     private async Task SendResponse(NetworkStream networkStream, string request)
     {
         string ackMessage = ParseRequest(request);
         byte[] responseBytes = Encoding.UTF8.GetBytes(ackMessage);
-
+        
         await networkStream.WriteAsync(responseBytes, 0, responseBytes.Length);
         await networkStream.FlushAsync();
-
-        _logger.Log($"Socket server sent acknowledgment: \"{ackMessage}\"");
+        
+        if (request == "200")
+            Disconnect();
     }
 
-    private string ParseRequest(string request)
+    private string ParseRequest(string request) => _requestAnalyzer.Analyze(request);
+
+    private void CheckConneciton()
     {
-        try
-        {
-            FileAttributes attributes = File.GetAttributes(request);
-            if (request == @"\")
-                return _requestAnalyzer.GetLogicalDrives(request) + directoryRequestEnding;
-            else if ((attributes & FileAttributes.Directory) == FileAttributes.Directory)
-                return _requestAnalyzer.GetDirectoryFiles(request) + directoryRequestEnding;
-            else if (Path.GetExtension(request) != ".txt")
-                return Path.GetFileName(request) + $"|{fileNameRequestEnding}";
-            return _requestAnalyzer.GetTextFileContents(request) + $"|{fileRequestEnding}";
-        }
-        catch (Exception ex)
-        {
-            return ex.Message + $"|{exceptionRequestEnding}";
-        }
+        if (_clientSocket.Connected == false)
+            Disconnect();
     }
 
     private void Disconnect()

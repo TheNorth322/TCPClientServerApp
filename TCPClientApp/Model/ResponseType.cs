@@ -4,5 +4,6 @@ public enum ResponseType
 {
     DirectoryContents,
     FileContents,
-    FileName
+    FileName,
+    System
 }

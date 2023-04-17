@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,7 +14,10 @@ public class TCPClientViewModel : ViewModelBase
 {
     private string[] _directories;
 
-    private ObservableCollection<ListBoxItemViewModel> _directoryContents;
+    private ObservableCollection<ListBoxItemViewModel> _serverDirectoryContents;
+    private ObservableCollection<ListBoxItemViewModel> _clientDirectoryContents;
+    private ListBoxItemViewModel? _selectedServerListBoxItem;
+    private ListBoxItemViewModel? _selectedClientListBoxItem;
     private bool _connected;
     private string _endPoint;
     private string _request;
@@ -21,33 +25,67 @@ public class TCPClientViewModel : ViewModelBase
     private ResponseParser parser;
     private string clientLog;
     private string _absolutePath;
-    private ListBoxItemViewModel _selectedListBoxItem;
+    private string _path;
 
-    public ListBoxItemViewModel SelectedListBoxItem
-    {
-        get { return _selectedListBoxItem; }
-        set
-        {
-            _selectedListBoxItem = value;
-            UpdateRequest();
-            OnPropertyChange(nameof(SelectedListBoxItem));
-        }
-    }
 
     public TCPClientViewModel()
     {
         EndPoint = "127.0.0.1:8888";
+        Path = "";
         socket = new TCPClient();
         parser = new ResponseParser();
+        _serverDirectoryContents = new ObservableCollection<ListBoxItemViewModel>();
+        _clientDirectoryContents = new ObservableCollection<ListBoxItemViewModel>();
+        GetDrives();
     }
+
+    public string Path
+    {
+        get { return _path; }
+        set
+        {
+            _path = value;
+            OnPropertyChange(nameof(Path));
+        }
+    }
+
+    public ListBoxItemViewModel SelectedServerListBoxItem
+    {
+        get { return _selectedServerListBoxItem; }
+        set
+        {
+            _selectedServerListBoxItem = value;
+            OnPropertyChange(nameof(SelectedServerListBoxItem));
+            UpdateRequest();
+        }
+    }
+
+    private void GetDrives()
+    {
+        string[] drives = Directory.GetLogicalDrives();
+
+        foreach (string drive in drives)
+            ClientDirectoryContents.Add(new ListBoxItemViewModel(drive));
+    }
+
+    public ListBoxItemViewModel SelectedClientListBoxItem
+    {
+        get { return _selectedClientListBoxItem; }
+        set
+        {
+            _selectedClientListBoxItem = value;
+            OnPropertyChange(nameof(SelectedClientListBoxItem));
+        }
+    }
+
 
     private void UpdateRequest()
     {
         Request = (_absolutePath.EndsWith(@"\") || _absolutePath == "")
-            ? _absolutePath + SelectedListBoxItem.Header
-            : _absolutePath + @$"\{SelectedListBoxItem.Header}";
+            ? _absolutePath + SelectedServerListBoxItem.Header
+            : _absolutePath + @$"\{SelectedServerListBoxItem.Header}";
     }
-
+    
     public string ClientLog
     {
         get { return clientLog; }
@@ -68,13 +106,23 @@ public class TCPClientViewModel : ViewModelBase
         }
     }
 
-    public ObservableCollection<ListBoxItemViewModel> DirectoryContents
+    public ObservableCollection<ListBoxItemViewModel> ServerDirectoryContents
     {
-        get { return _directoryContents; }
+        get { return _serverDirectoryContents; }
         set
         {
-            _directoryContents = value;
-            OnPropertyChange(nameof(DirectoryContents));
+            _serverDirectoryContents = value;
+            OnPropertyChange(nameof(ServerDirectoryContents));
+        }
+    }
+
+    public ObservableCollection<ListBoxItemViewModel> ClientDirectoryContents
+    {
+        get { return _clientDirectoryContents; }
+        set
+        {
+            _clientDirectoryContents = value;
+            OnPropertyChange(nameof(ClientDirectoryContents));
         }
     }
 
@@ -118,6 +166,7 @@ public class TCPClientViewModel : ViewModelBase
     {
         ClientLog = "";
     }
+
     private RelayCommand _disconnect;
 
     public RelayCommand DisconnectCommand
@@ -144,6 +193,19 @@ public class TCPClientViewModel : ViewModelBase
         }
     }
 
+    private RelayCommand _updateClientExplorer;
+
+    public RelayCommand UpdateClientExplorerCommand
+    {
+        get
+        {
+            return _updateClientExplorer ?? new RelayCommand(
+                _execute => UpdateClientExplorerContents(),
+                _canExecute => true
+            );
+        }
+    }
+
     private RelayCommand _getDisksCommand;
 
     public RelayCommand GetDisksCommand
@@ -157,7 +219,7 @@ public class TCPClientViewModel : ViewModelBase
         }
     }
 
-    private async void SendRequest()
+    private async Task SendRequest()
     {
         try
         {
@@ -168,11 +230,16 @@ public class TCPClientViewModel : ViewModelBase
             if (parsedResponse.Type == ResponseType.DirectoryContents)
             {
                 ClientLog += $"Client received: {response}\n";
-                UpdateDirectoryContents(parsedResponse.Contents);
+                UpdateServerDirectoryContents(parsedResponse.Contents);
                 UpdateAbsolutePath();
             }
             else if (parsedResponse.Type == ResponseType.FileContents)
                 ClientLog += $"Client received: {parsedResponse.Contents[0]}\n";
+            else if (parsedResponse.Type == ResponseType.System)
+            {
+                ClientLog += $"Client received: {response}\n";
+                socket.Disconnect();
+            }
             else
                 ClientLog += $"Client received: {parsedResponse.Contents[0]}\n";
         }
@@ -184,18 +251,19 @@ public class TCPClientViewModel : ViewModelBase
 
     private void ClearDirectoryContents()
     {
-        DirectoryContents = new ObservableCollection<ListBoxItemViewModel>();
+        ServerDirectoryContents = new ObservableCollection<ListBoxItemViewModel>();
     }
 
-    private void Disconnect()
+    private async Task Disconnect()
     {
         try
         {
-            socket.Disconnect();
+            Request = "200";
+            await SendRequest();
+            Request = "";
             _connected = false;
             ClientLog += $"Client disconnected from: {EndPoint}\n";
             ClearDirectoryContents();
-            Request = "";
         }
         catch (Exception ex)
         {
@@ -230,11 +298,33 @@ public class TCPClientViewModel : ViewModelBase
         _absolutePath = Request;
     }
 
-    private void UpdateDirectoryContents(string[] contents)
+    private void UpdateServerDirectoryContents(string[] contents)
     {
         ObservableCollection<ListBoxItemViewModel> directories = new ObservableCollection<ListBoxItemViewModel>();
         foreach (string line in contents)
             directories.Add(new ListBoxItemViewModel(line));
-        DirectoryContents = directories;
+        ServerDirectoryContents = directories;
+    }
+
+    private void UpdateClientExplorerContents()
+    {
+        UpdatePath();
+        ObservableCollection<ListBoxItemViewModel> directories = new ObservableCollection<ListBoxItemViewModel>();
+        DirectoryInfo directoryInfo = new DirectoryInfo(Path);
+        FileInfo[] files = directoryInfo.GetFiles();
+        DirectoryInfo[] subDirectories = directoryInfo.GetDirectories();
+
+
+        foreach (FileInfo file in files)
+            directories.Add(new ListBoxItemViewModel(file.Name));
+        foreach (DirectoryInfo directory in subDirectories)
+            directories.Add(new ListBoxItemViewModel(directory.Name));
+
+        ClientDirectoryContents = directories;
+    }
+
+    private void UpdatePath()
+    {
+        Path += SelectedClientListBoxItem.Header;
     }
 }

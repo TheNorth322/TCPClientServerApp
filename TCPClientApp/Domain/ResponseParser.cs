@@ -9,20 +9,22 @@ public class ResponseParser
     {
         string[] parsedResponse = response.Split("|");
         
-        if (parsedResponse.Last() == "type=dirContents")
+        if (parsedResponse.First() == "type=dirContents")
             return new Response(ResponseType.DirectoryContents, RemoveType(parsedResponse));
-        else if (parsedResponse.Last() == "type=fileName")
+        else if (parsedResponse.First() == "type=fileName")
             return new Response(ResponseType.FileName, RemoveType(parsedResponse));
+        else if (parsedResponse.First() == "type=system")
+            return new Response(ResponseType.System, RemoveType(parsedResponse));
         else
             return new Response(ResponseType.FileContents, Join(RemoveType(parsedResponse)));
     }
 
     private string[] RemoveType(string[] parsedResponse)
     {
-        string[] response = new string[parsedResponse.Length - 1];
+        string[] response = new string[parsedResponse.Length - 2];
 
-        for (int i = 0; i < parsedResponse.Length - 1; i++)
-            response[i] = parsedResponse[i];
+        for (int i = 1; i < parsedResponse.Length - 1; i++)
+            response[i - 1] = parsedResponse[i];
 
         return response;
     }
