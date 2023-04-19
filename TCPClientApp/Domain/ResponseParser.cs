@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace TCPClientApp.Domain;
@@ -8,33 +10,42 @@ public class ResponseParser
     public Response Parse(string response)
     {
         string[] parsedResponse = response.Split("|");
-        
-        if (parsedResponse.First() == "type=dirContents")
-            return new Response(ResponseType.DirectoryContents, RemoveType(parsedResponse));
-        else if (parsedResponse.First() == "type=fileName")
-            return new Response(ResponseType.FileName, RemoveType(parsedResponse));
-        else if (parsedResponse.First() == "type=system")
-            return new Response(ResponseType.System, RemoveType(parsedResponse));
-        else
-            return new Response(ResponseType.FileContents, Join(RemoveType(parsedResponse)));
-    }
 
+        return parsedResponse.First() switch
+        {
+            "type=dirContents" => new Response(ResponseType.DirectoryContents, Join(RemoveType(parsedResponse))),
+            "type=fileName" => new Response(ResponseType.FileName, Join(RemoveType(parsedResponse))),
+            "type=system" => new Response(ResponseType.System, Join(RemoveType(parsedResponse))),
+            "type=port" => new Response(ResponseType.Port, Join(RemoveType(parsedResponse))),
+            "type=fileContents" => new Response(ResponseType.FileContents, SaveInFile(parsedResponse)),
+            _ => throw new ApplicationException("Wrong request")
+        };
+    }
+    
     private string[] RemoveType(string[] parsedResponse)
     {
-        string[] response = new string[parsedResponse.Length - 2];
+        string[] response = new string[parsedResponse.Length - 1];
 
-        for (int i = 1; i < parsedResponse.Length - 1; i++)
+        for (int i = 1; i < parsedResponse.Length; i++)
             response[i - 1] = parsedResponse[i];
 
         return response;
     }
 
-    private string[] Join(string[] parsedResponse)
+    private string Join(string[] parsedResponse)
     {
         StringBuilder stringBuilder = new StringBuilder();
         foreach (string line in parsedResponse)
             stringBuilder.Append($"{line}|");
         stringBuilder.Remove(stringBuilder.Length - 1, 1);
-        return new string[] { stringBuilder.ToString() };
+        return  stringBuilder.ToString();
+    }
+
+    private string SaveInFile(string[] parsedResponse)
+    {
+        string fileName = DateTime.Now.ToString().Replace(':', ' ').Replace('.', ' ');
+        FileStream fs = File.Open($@"C:\Temp\{fileName}.txt", FileMode.Create);
+        fs.Write(Encoding.UTF8.GetBytes(Join(RemoveType(parsedResponse))));
+        return $"File save in C:\\Temp\\{fileName}.txt";
     }
 }

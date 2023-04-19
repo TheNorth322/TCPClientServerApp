@@ -5,5 +5,6 @@ public enum ResponseType
     DirectoryContents,
     FileContents,
     FileName,
-    System
+    System,
+    Port
 }

@@ -6,19 +6,20 @@ namespace TCPClientApp.Model;
 
 public class ClientHandler : IDisposable
 {
-    private RequestAnalyzer _requestAnalyzer;
     private TcpClient _clientSocket;
     private ILogger _logger;
+    private Port port;
+    private string directoryRequestEnding = "type=dirContents";
+    private string fileRequestEnding = "type=fileContents";
+    private string fileNameRequestEnding = "type=fileName";
+    private string exceptionRequestEnding = "type=exception";
+    private string systemRequestEnding = "type=system";
 
-    public ClientHandler()
-    {
-        _requestAnalyzer = new RequestAnalyzer();
-    }
-
-    public ClientHandler(TcpClient client, ILogger logger) : this()
+    public ClientHandler(TcpClient client, ILogger logger, Port _port)
     {
         if (client == null)
             throw new ArgumentNullException(nameof(client));
+        port = _port;
         _clientSocket = client;
         _logger = logger;
     }
@@ -35,7 +36,7 @@ public class ClientHandler : IDisposable
         {
             while (true)
             {
-                byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[1024 * 32];
                 NetworkStream networkStream = _clientSocket.GetStream();
                 StringBuilder request = new StringBuilder();
 
@@ -70,16 +71,42 @@ public class ClientHandler : IDisposable
     {
         string ackMessage = ParseRequest(request);
         byte[] responseBytes = Encoding.UTF8.GetBytes(ackMessage);
-        
+
         await networkStream.WriteAsync(responseBytes, 0, responseBytes.Length);
         await networkStream.FlushAsync();
-        
+
         if (request == "200")
             Disconnect();
     }
 
-    private string ParseRequest(string request) => _requestAnalyzer.Analyze(request);
+    private string ParseRequest(string request)
+    {
+        try
+        {
+            switch (request)
+            {
+                case "200":
+                    return $"{systemRequestEnding}|Disconnected";
+                case @"\":
+                    return $"{directoryRequestEnding}|{GetLogicalDrives(request)}";
+                default:
+                {
+                    FileAttributes attributes = File.GetAttributes(request);
+                    if ((attributes & FileAttributes.Directory) == FileAttributes.Directory)
+                        return $"{directoryRequestEnding}|{GetDirectoryFiles(request)}";
+                    else if (Path.GetExtension(request) != ".txt")
+                        return $"{fileNameRequestEnding}|{Path.GetFileName(request)}";
+                    break;
+                }
+            }
 
+            return $"{fileRequestEnding}|{GetTextFileContents(request)}";
+        }
+        catch (Exception ex)
+        {
+            return $"{exceptionRequestEnding}|{ex.Message}";
+        }
+    }
     private void CheckConneciton()
     {
         if (_clientSocket.Connected == false)
@@ -88,13 +115,49 @@ public class ClientHandler : IDisposable
 
     private void Disconnect()
     {
+        port.Occupied = false;
         _clientSocket.Close();
+        _clientSocket.Dispose();
         _logger.Log(" >> Client disconnected");
     }
 
     public void Dispose()
     {
         Disconnect();
-        _clientSocket.Dispose();
+    }
+
+    private string GetLogicalDrives(string _)
+    {
+        string[] drives = Directory.GetLogicalDrives();
+        StringBuilder sr = new StringBuilder();
+
+        for (int i = 0; i < drives.Length; i++)
+            sr.Append((i == drives.Length - 1) 
+                ? $"{drives[i]}" 
+                : $"{drives[i]}|"
+            );
+
+        return sr.ToString();
+    }
+
+    private string GetDirectoryFiles(string path)
+    {
+        DirectoryInfo directoryInfo = new DirectoryInfo(path);
+        FileInfo[] files = directoryInfo.GetFiles();
+        DirectoryInfo[] subDirectories = directoryInfo.GetDirectories();
+        StringBuilder stringBuilder = new StringBuilder();
+
+        foreach (var file in files)
+            stringBuilder.Append($"{file.Name}|");
+
+        foreach (var directory in subDirectories)
+            stringBuilder.Append($"{directory.Name}|");
+
+        return stringBuilder.ToString();
+    }
+
+    private string GetTextFileContents(string path)
+    {
+        return File.ReadAllText(path);
     }
 }

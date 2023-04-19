@@ -13,16 +13,12 @@ namespace TCPClientApp.UI.ViewModels;
 public class TCPClientViewModel : ViewModelBase
 {
     private string[] _directories;
-
     private ObservableCollection<ListBoxItemViewModel> _serverDirectoryContents;
-    private ObservableCollection<ListBoxItemViewModel> _clientDirectoryContents;
     private ListBoxItemViewModel? _selectedServerListBoxItem;
-    private ListBoxItemViewModel? _selectedClientListBoxItem;
     private bool _connected;
     private string _endPoint;
     private string _request;
     private TCPClient socket;
-    private ResponseParser parser;
     private string clientLog;
     private string _absolutePath;
     private string _path;
@@ -31,22 +27,8 @@ public class TCPClientViewModel : ViewModelBase
     public TCPClientViewModel()
     {
         EndPoint = "127.0.0.1:8888";
-        Path = "";
         socket = new TCPClient();
-        parser = new ResponseParser();
         _serverDirectoryContents = new ObservableCollection<ListBoxItemViewModel>();
-        _clientDirectoryContents = new ObservableCollection<ListBoxItemViewModel>();
-        GetDrives();
-    }
-
-    public string Path
-    {
-        get { return _path; }
-        set
-        {
-            _path = value;
-            OnPropertyChange(nameof(Path));
-        }
     }
 
     public ListBoxItemViewModel SelectedServerListBoxItem
@@ -60,32 +42,14 @@ public class TCPClientViewModel : ViewModelBase
         }
     }
 
-    private void GetDrives()
-    {
-        string[] drives = Directory.GetLogicalDrives();
-
-        foreach (string drive in drives)
-            ClientDirectoryContents.Add(new ListBoxItemViewModel(drive));
-    }
-
-    public ListBoxItemViewModel SelectedClientListBoxItem
-    {
-        get { return _selectedClientListBoxItem; }
-        set
-        {
-            _selectedClientListBoxItem = value;
-            OnPropertyChange(nameof(SelectedClientListBoxItem));
-        }
-    }
-
-
     private void UpdateRequest()
     {
+        if (_absolutePath == @"\") _absolutePath = "";
         Request = (_absolutePath.EndsWith(@"\") || _absolutePath == "")
             ? _absolutePath + SelectedServerListBoxItem.Header
             : _absolutePath + @$"\{SelectedServerListBoxItem.Header}";
     }
-    
+
     public string ClientLog
     {
         get { return clientLog; }
@@ -113,16 +77,6 @@ public class TCPClientViewModel : ViewModelBase
         {
             _serverDirectoryContents = value;
             OnPropertyChange(nameof(ServerDirectoryContents));
-        }
-    }
-
-    public ObservableCollection<ListBoxItemViewModel> ClientDirectoryContents
-    {
-        get { return _clientDirectoryContents; }
-        set
-        {
-            _clientDirectoryContents = value;
-            OnPropertyChange(nameof(ClientDirectoryContents));
         }
     }
 
@@ -193,19 +147,6 @@ public class TCPClientViewModel : ViewModelBase
         }
     }
 
-    private RelayCommand _updateClientExplorer;
-
-    public RelayCommand UpdateClientExplorerCommand
-    {
-        get
-        {
-            return _updateClientExplorer ?? new RelayCommand(
-                _execute => UpdateClientExplorerContents(),
-                _canExecute => true
-            );
-        }
-    }
-
     private RelayCommand _getDisksCommand;
 
     public RelayCommand GetDisksCommand
@@ -224,24 +165,26 @@ public class TCPClientViewModel : ViewModelBase
         try
         {
             ClientLog += $"Client sent: {Request}\n";
-            string response = await socket.SendRequestAsync(Request);
-            Response parsedResponse = parser.Parse(response);
+            Response response = await socket.SendRequestAsync(Request);
 
-            if (parsedResponse.Type == ResponseType.DirectoryContents)
+            switch (response.Type)
             {
-                ClientLog += $"Client received: {response}\n";
-                UpdateServerDirectoryContents(parsedResponse.Contents);
-                UpdateAbsolutePath();
+                case ResponseType.DirectoryContents:
+                    ClientLog += $"Client received: {response.Contents}\n";
+                    UpdateServerDirectoryContents(response.Contents.Split('|'));
+                    UpdateAbsolutePath();
+                    break;
+                case ResponseType.FileContents:
+                    ClientLog += $"Client received: {response.Contents}\n";
+                    break;
+                case ResponseType.System:
+                    ClientLog += $"Client received: {response.Contents}\n";
+                    socket.Disconnect();
+                    break;
+                default:
+                    ClientLog += $"Client received: {response.Contents}\n";
+                    break;
             }
-            else if (parsedResponse.Type == ResponseType.FileContents)
-                ClientLog += $"Client received: {parsedResponse.Contents[0]}\n";
-            else if (parsedResponse.Type == ResponseType.System)
-            {
-                ClientLog += $"Client received: {response}\n";
-                socket.Disconnect();
-            }
-            else
-                ClientLog += $"Client received: {parsedResponse.Contents[0]}\n";
         }
         catch (Exception ex)
         {
@@ -289,7 +232,7 @@ public class TCPClientViewModel : ViewModelBase
     private async void GetDisks()
     {
         Request = @"\";
-        SendRequest();
+        await SendRequest();
         Request = "";
     }
 
@@ -304,27 +247,5 @@ public class TCPClientViewModel : ViewModelBase
         foreach (string line in contents)
             directories.Add(new ListBoxItemViewModel(line));
         ServerDirectoryContents = directories;
-    }
-
-    private void UpdateClientExplorerContents()
-    {
-        UpdatePath();
-        ObservableCollection<ListBoxItemViewModel> directories = new ObservableCollection<ListBoxItemViewModel>();
-        DirectoryInfo directoryInfo = new DirectoryInfo(Path);
-        FileInfo[] files = directoryInfo.GetFiles();
-        DirectoryInfo[] subDirectories = directoryInfo.GetDirectories();
-
-
-        foreach (FileInfo file in files)
-            directories.Add(new ListBoxItemViewModel(file.Name));
-        foreach (DirectoryInfo directory in subDirectories)
-            directories.Add(new ListBoxItemViewModel(directory.Name));
-
-        ClientDirectoryContents = directories;
-    }
-
-    private void UpdatePath()
-    {
-        Path += SelectedClientListBoxItem.Header;
     }
 }
