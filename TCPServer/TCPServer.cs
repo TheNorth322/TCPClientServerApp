@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices.JavaScript;
 using System.Text;
 
 namespace TCPClientApp.Model;
@@ -9,6 +10,7 @@ public class TCPServer
     private ILogger _logger;
     private Port[] _ports;
     private int startPort = 8888;
+    private byte portRequest = 6;
 
     public TCPServer(ILogger logger)
     {
@@ -27,13 +29,13 @@ public class TCPServer
         while (true)
         {
             TcpClient client = await listener.AcceptTcpClientAsync();
-            _logger.Log(" >> Client connected to localhost:8888");
+            _logger.Log(" >> Client connected on port 8888");
             Port port = FindFreePort();
             _logger.Log($" >> Found new port: {port.PortValue}");
             await SendNewPort(client, port);
             _logger.Log($" >> Waiting for connection");
             TcpClient cl = await WaitForConnection(port);
-            _logger.Log($" >> Client connected to localhost:{port.PortValue}");
+            _logger.Log($" >> Client connected on port {port.PortValue}");
             port.Occupied = true;
             ClientHandler clientHandler = new ClientHandler(cl, _logger, port);
             clientHandler.Start();
@@ -45,8 +47,11 @@ public class TCPServer
     private async Task SendNewPort(TcpClient client, Port port)
     {
         NetworkStream networkStream = client.GetStream();
-        byte[] responseBytes = Encoding.UTF8.GetBytes($"type=port|{port.PortValue}");
-
+        byte[] bytes = Encoding.UTF8.GetBytes($"{port.PortValue}"), responseBytes = new byte[bytes.Length + 1];
+        
+        responseBytes[0] = portRequest;
+        Array.Copy(bytes, 0, responseBytes, 1, bytes.Length);
+        
         await networkStream.WriteAsync(responseBytes, 0, responseBytes.Length);
         await networkStream.FlushAsync();
 

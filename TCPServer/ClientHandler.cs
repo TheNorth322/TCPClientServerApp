@@ -9,11 +9,13 @@ public class ClientHandler : IDisposable
     private TcpClient _clientSocket;
     private ILogger _logger;
     private Port port;
-    private string directoryRequestEnding = "type=dirContents";
-    private string fileRequestEnding = "type=fileContents";
-    private string fileNameRequestEnding = "type=fileName";
-    private string exceptionRequestEnding = "type=exception";
-    private string systemRequestEnding = "type=system";
+    private NetworkStream _networkStream;
+    private byte directoryTreeRequest = 1;
+    private byte fileContentsRequest = 2;
+    private byte fileNameRequest = 3;
+    private byte exceptionRequest = 4;
+    private byte disksRequest = 7;
+    private byte disconectRequest = 8;
 
     public ClientHandler(TcpClient client, ILogger logger, Port _port)
     {
@@ -21,6 +23,7 @@ public class ClientHandler : IDisposable
             throw new ArgumentNullException(nameof(client));
         port = _port;
         _clientSocket = client;
+        _networkStream = _clientSocket.GetStream();
         _logger = logger;
     }
 
@@ -36,12 +39,11 @@ public class ClientHandler : IDisposable
         {
             while (true)
             {
-                byte[] buffer = new byte[1024 * 32];
-                NetworkStream networkStream = _clientSocket.GetStream();
+                byte[] buffer = new byte[1024 * 8];
                 StringBuilder request = new StringBuilder();
 
-                await GetRequest(networkStream, buffer, request);
-                await SendResponse(networkStream, request.ToString());
+                await GetRequest(buffer, request);
+                await SendResponse(request.ToString());
 
                 _logger.Log($"Socket server received message: \"{request}\"");
             }
@@ -52,61 +54,85 @@ public class ClientHandler : IDisposable
         }
     }
 
-    private async Task GetRequest(NetworkStream networkStream, byte[] buffer, StringBuilder request)
+    private async Task GetRequest(byte[] buffer, StringBuilder request)
     {
         CheckConneciton();
-        int bytesRead = await networkStream.ReadAsync(buffer);
+        int bytesRead = await _networkStream.ReadAsync(buffer);
+
         while (bytesRead > 0)
         {
             request.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
 
-            if (networkStream.DataAvailable == false)
+            if (_networkStream.DataAvailable == false)
                 break;
 
-            bytesRead = await networkStream.ReadAsync(buffer, 0, buffer.Length);
+            bytesRead = await _networkStream.ReadAsync(buffer, 0, buffer.Length);
         }
     }
 
-    private async Task SendResponse(NetworkStream networkStream, string request)
+    private async Task SendResponse(string request)
     {
-        string ackMessage = ParseRequest(request);
-        byte[] responseBytes = Encoding.UTF8.GetBytes(ackMessage);
-
-        await networkStream.WriteAsync(responseBytes, 0, responseBytes.Length);
-        await networkStream.FlushAsync();
-
-        if (request == "200")
-            Disconnect();
-    }
-
-    private string ParseRequest(string request)
-    {
+        byte[] type = Encoding.UTF8.GetBytes(request.Substring(0, 1));
+        request = request.Substring(1, request.Length - 1);
         try
         {
-            switch (request)
+            switch (type[0])
             {
-                case "200":
-                    return $"{systemRequestEnding}|Disconnected";
-                case @"\":
-                    return $"{directoryRequestEnding}|{GetLogicalDrives(request)}";
-                default:
-                {
-                    FileAttributes attributes = File.GetAttributes(request);
-                    if ((attributes & FileAttributes.Directory) == FileAttributes.Directory)
-                        return $"{directoryRequestEnding}|{GetDirectoryFiles(request)}";
-                    else if (Path.GetExtension(request) != ".txt")
-                        return $"{fileNameRequestEnding}|{Path.GetFileName(request)}";
+                case 1:
+                    await SendStringAsync(GetDirectoryContents(request), directoryTreeRequest);
                     break;
-                }
+                case 2:
+                    await SendFileContentsAsync(request);
+                    break;
+                case 3:
+                    await SendStringAsync(Path.GetFileName(request), fileNameRequest);
+                    break;
+                case 7:
+                    await SendStringAsync(GetLogicalDrives(request), disksRequest);
+                    break;
+                case 8:
+                    Disconnect();
+                    break;
+                default:
+                    throw new ApplicationException("Wrong signature!");
             }
-
-            return $"{fileRequestEnding}|{GetTextFileContents(request)}";
         }
         catch (Exception ex)
         {
-            return $"{exceptionRequestEnding}|{ex.Message}";
+            await SendStringAsync(ex.Message, exceptionRequest);
         }
     }
+
+    private async Task SendFileContentsAsync(string request)
+    {
+        FileStream fileStream = new FileStream(request, FileMode.Open);
+        byte[] buffer = new byte[1024 * 8];
+        buffer[0] = fileContentsRequest;
+        int bytesRead, offset = 1;
+        bytesRead = await fileStream.ReadAsync(buffer, offset, buffer.Length - offset);
+        offset = 0;
+        while (bytesRead != 0)
+        {
+            await _networkStream.WriteAsync(buffer, 0, buffer.Length);
+            await _networkStream.FlushAsync();
+            bytesRead = await fileStream.ReadAsync(buffer, offset, buffer.Length - offset);
+        } 
+
+        fileStream.Close();
+    }
+
+    private async Task SendStringAsync(string response, byte type)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(response);
+        byte[] responseBytes = new byte[bytes.Length + 1];
+
+        responseBytes[0] = type;
+        Array.Copy(bytes, 0, responseBytes, 1, bytes.Length);
+
+        await _networkStream.WriteAsync(responseBytes, 0, responseBytes.Length);
+        await _networkStream.FlushAsync();
+    }
+
     private void CheckConneciton()
     {
         if (_clientSocket.Connected == false)
@@ -121,10 +147,6 @@ public class ClientHandler : IDisposable
         _logger.Log(" >> Client disconnected");
     }
 
-    public void Dispose()
-    {
-        Disconnect();
-    }
 
     private string GetLogicalDrives(string _)
     {
@@ -132,15 +154,15 @@ public class ClientHandler : IDisposable
         StringBuilder sr = new StringBuilder();
 
         for (int i = 0; i < drives.Length; i++)
-            sr.Append((i == drives.Length - 1) 
-                ? $"{drives[i]}" 
+            sr.Append((i == drives.Length - 1)
+                ? $"{drives[i]}"
                 : $"{drives[i]}|"
             );
 
         return sr.ToString();
     }
 
-    private string GetDirectoryFiles(string path)
+    private string GetDirectoryContents(string path)
     {
         DirectoryInfo directoryInfo = new DirectoryInfo(path);
         FileInfo[] files = directoryInfo.GetFiles();
@@ -156,8 +178,8 @@ public class ClientHandler : IDisposable
         return stringBuilder.ToString();
     }
 
-    private string GetTextFileContents(string path)
+    public void Dispose()
     {
-        return File.ReadAllText(path);
+        Disconnect();
     }
 }

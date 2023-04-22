@@ -6,5 +6,7 @@ public enum ResponseType
     FileContents,
     FileName,
     System,
-    Port
+    Port,
+    Disks,
+    Exception
 }

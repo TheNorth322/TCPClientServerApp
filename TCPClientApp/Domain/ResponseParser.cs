@@ -7,7 +7,7 @@ namespace TCPClientApp.Domain;
 
 public class ResponseParser
 {
-    public Response Parse(string response)
+    public Response Parse(string response, string request)
     {
         string[] parsedResponse = response.Split("|");
 
@@ -17,7 +17,7 @@ public class ResponseParser
             "type=fileName" => new Response(ResponseType.FileName, Join(RemoveType(parsedResponse))),
             "type=system" => new Response(ResponseType.System, Join(RemoveType(parsedResponse))),
             "type=port" => new Response(ResponseType.Port, Join(RemoveType(parsedResponse))),
-            "type=fileContents" => new Response(ResponseType.FileContents, SaveInFile(parsedResponse)),
+            "type=fileContents" => new Response(ResponseType.FileContents, SaveInFile(parsedResponse, request)),
             _ => throw new ApplicationException("Wrong request")
         };
     }
@@ -41,11 +41,11 @@ public class ResponseParser
         return  stringBuilder.ToString();
     }
 
-    private string SaveInFile(string[] parsedResponse)
+    private string SaveInFile(string[] parsedResponse, string request)
     {
-        string fileName = DateTime.Now.ToString().Replace(':', ' ').Replace('.', ' ');
-        FileStream fs = File.Open($@"C:\Temp\{fileName}.txt", FileMode.Create);
+        string path = $"{Environment.GetFolderPath(Environment.SpecialFolder.Desktop)}\\{Path.GetFileName(request)}";
+        FileStream fs = File.Open(path, FileMode.OpenOrCreate);
         fs.Write(Encoding.UTF8.GetBytes(Join(RemoveType(parsedResponse))));
-        return $"File save in C:\\Temp\\{fileName}.txt";
+        return $"File save in {path}";
     }
 }

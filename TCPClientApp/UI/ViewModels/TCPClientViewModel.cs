@@ -15,7 +15,9 @@ public class TCPClientViewModel : ViewModelBase
     private string[] _directories;
     private ObservableCollection<ListBoxItemViewModel> _serverDirectoryContents;
     private ListBoxItemViewModel? _selectedServerListBoxItem;
+    private RequestParser _requestParser;
     private bool _connected;
+    private string _enterEndPoint;
     private string _endPoint;
     private string _request;
     private TCPClient socket;
@@ -29,6 +31,7 @@ public class TCPClientViewModel : ViewModelBase
         EndPoint = "127.0.0.1:8888";
         socket = new TCPClient();
         _serverDirectoryContents = new ObservableCollection<ListBoxItemViewModel>();
+        _requestParser = new RequestParser();
     }
 
     public ListBoxItemViewModel SelectedServerListBoxItem
@@ -40,14 +43,6 @@ public class TCPClientViewModel : ViewModelBase
             OnPropertyChange(nameof(SelectedServerListBoxItem));
             UpdateRequest();
         }
-    }
-
-    private void UpdateRequest()
-    {
-        if (_absolutePath == @"\") _absolutePath = "";
-        Request = (_absolutePath.EndsWith(@"\") || _absolutePath == "")
-            ? _absolutePath + SelectedServerListBoxItem.Header
-            : _absolutePath + @$"\{SelectedServerListBoxItem.Header}";
     }
 
     public string ClientLog
@@ -82,10 +77,10 @@ public class TCPClientViewModel : ViewModelBase
 
     public string EndPoint
     {
-        get { return _endPoint; }
+        get { return _enterEndPoint; }
         set
         {
-            _endPoint = value;
+            _enterEndPoint = value;
             OnPropertyChange(nameof(EndPoint));
         }
     }
@@ -141,7 +136,7 @@ public class TCPClientViewModel : ViewModelBase
         get
         {
             return _sendRequest ?? new RelayCommand(
-                _execute => SendRequest(),
+                _execute => SendRequest(Request),
                 _canExecute => _connected
             );
         }
@@ -160,12 +155,13 @@ public class TCPClientViewModel : ViewModelBase
         }
     }
 
-    private async Task SendRequest()
+    private async Task SendRequest(string request)
     {
         try
         {
-            ClientLog += $"Client sent: {Request}\n";
-            Response response = await socket.SendRequestAsync(Request);
+            ClientLog += $"Client sent: {request}\n";
+            request = _requestParser.Parse(request);
+            Response response = await socket.SendRequestAsync(request);
 
             switch (response.Type)
             {
@@ -174,12 +170,12 @@ public class TCPClientViewModel : ViewModelBase
                     UpdateServerDirectoryContents(response.Contents.Split('|'));
                     UpdateAbsolutePath();
                     break;
+                case ResponseType.Disks:
+                    ClientLog += $"Client received: {response.Contents}\n";
+                    UpdateServerDirectoryContents(response.Contents.Split('|'));
+                    break;
                 case ResponseType.FileContents:
                     ClientLog += $"Client received: {response.Contents}\n";
-                    break;
-                case ResponseType.System:
-                    ClientLog += $"Client received: {response.Contents}\n";
-                    socket.Disconnect();
                     break;
                 default:
                     ClientLog += $"Client received: {response.Contents}\n";
@@ -201,11 +197,9 @@ public class TCPClientViewModel : ViewModelBase
     {
         try
         {
-            Request = "200";
-            await SendRequest();
-            Request = "";
+            await socket.DisconnectAsync();
             _connected = false;
-            ClientLog += $"Client disconnected from: {EndPoint}\n";
+            ClientLog += $"Client disconnected from: {_endPoint}\n";
             ClearDirectoryContents();
         }
         catch (Exception ex)
@@ -218,9 +212,9 @@ public class TCPClientViewModel : ViewModelBase
     {
         try
         {
-            await socket.ConnectAsync(EndPoint);
+            _endPoint = await socket.ConnectAsync(EndPoint);
             _connected = true;
-            ClientLog += $"Client connected to: {EndPoint}\n";
+            ClientLog += $"Client connected to: {_endPoint}\n";
             GetDisks();
         }
         catch (Exception ex)
@@ -231,14 +225,22 @@ public class TCPClientViewModel : ViewModelBase
 
     private async void GetDisks()
     {
-        Request = @"\";
-        await SendRequest();
         Request = "";
+        _absolutePath = "";
+        await SendRequest(@"\");
     }
 
     private void UpdateAbsolutePath()
     {
         _absolutePath = Request;
+    }
+
+    private void UpdateRequest()
+    {
+        if (Request == @"\") Request = "";
+        Request = (_absolutePath.EndsWith(@"\") || _absolutePath == "")
+            ? _absolutePath + SelectedServerListBoxItem.Header
+            : _absolutePath + $"\\{SelectedServerListBoxItem.Header}";
     }
 
     private void UpdateServerDirectoryContents(string[] contents)
