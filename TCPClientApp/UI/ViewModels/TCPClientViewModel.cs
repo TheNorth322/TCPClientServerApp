@@ -30,6 +30,7 @@ public class TCPClientViewModel : ViewModelBase
     {
         EndPoint = "127.0.0.1:8888";
         socket = new TCPClient();
+        socket.Disconnected += OnDisconnect;
         _serverDirectoryContents = new ObservableCollection<ListBoxItemViewModel>();
         _requestParser = new RequestParser();
     }
@@ -198,9 +199,6 @@ public class TCPClientViewModel : ViewModelBase
         try
         {
             await socket.DisconnectAsync();
-            _connected = false;
-            ClientLog += $"Client disconnected from: {_endPoint}\n";
-            ClearDirectoryContents();
         }
         catch (Exception ex)
         {
@@ -208,11 +206,19 @@ public class TCPClientViewModel : ViewModelBase
         }
     }
 
+    private void OnDisconnect()
+    {
+        _connected = false;
+        ClientLog += $"Client disconnected from: {_endPoint}\n";
+        ClearDirectoryContents();
+    }
+
     private async void Connect()
     {
         try
         {
-            _endPoint = await socket.ConnectAsync(EndPoint);
+            await socket.ConnectAsync(EndPoint);
+            _endPoint = socket.IpEndPoint.ToString();
             _connected = true;
             ClientLog += $"Client connected to: {_endPoint}\n";
             GetDisks();

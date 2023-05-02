@@ -12,7 +12,6 @@ public class ClientHandler : IDisposable
     private NetworkStream _networkStream;
     private byte directoryTreeRequest = 1;
     private byte fileContentsRequest = 2;
-    private byte fileNameRequest = 3;
     private byte exceptionRequest = 4;
     private byte disksRequest = 7;
     private byte disconectRequest = 8;
@@ -85,7 +84,6 @@ public class ClientHandler : IDisposable
                     await SendFileContentsAsync(request);
                     break;
                 case 3:
-                    await SendStringAsync(Path.GetFileName(request), fileNameRequest);
                     break;
                 case 7:
                     await SendStringAsync(GetLogicalDrives(request), disksRequest);
@@ -108,15 +106,17 @@ public class ClientHandler : IDisposable
         FileStream fileStream = new FileStream(request, FileMode.Open);
         byte[] buffer = new byte[1024 * 8];
         buffer[0] = fileContentsRequest;
-        int bytesRead, offset = 1;
-        bytesRead = await fileStream.ReadAsync(buffer, offset, buffer.Length - offset);
-        offset = 0;
+        int bytesRead = await fileStream.ReadAsync(buffer, 1, buffer.Length - 1);
+
+        await _networkStream.WriteAsync(buffer, 0, bytesRead + 1);
+        await _networkStream.FlushAsync();
+
         while (bytesRead != 0)
         {
-            await _networkStream.WriteAsync(buffer, 0, buffer.Length);
+            bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length);
+            await _networkStream.WriteAsync(buffer, 0, bytesRead);
             await _networkStream.FlushAsync();
-            bytesRead = await fileStream.ReadAsync(buffer, offset, buffer.Length - offset);
-        } 
+        }
 
         fileStream.Close();
     }
@@ -125,7 +125,7 @@ public class ClientHandler : IDisposable
     {
         byte[] bytes = Encoding.UTF8.GetBytes(response);
         byte[] responseBytes = new byte[bytes.Length + 1];
-
+        _logger.Log($"Server sent: {response}");
         responseBytes[0] = type;
         Array.Copy(bytes, 0, responseBytes, 1, bytes.Length);
 
@@ -151,15 +151,15 @@ public class ClientHandler : IDisposable
     private string GetLogicalDrives(string _)
     {
         string[] drives = Directory.GetLogicalDrives();
-        StringBuilder sr = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
 
         for (int i = 0; i < drives.Length; i++)
-            sr.Append((i == drives.Length - 1)
+            sb.Append((i == drives.Length - 1)
                 ? $"{drives[i]}"
                 : $"{drives[i]}|"
             );
 
-        return sr.ToString();
+        return sb.ToString();
     }
 
     private string GetDirectoryContents(string path)
@@ -172,8 +172,14 @@ public class ClientHandler : IDisposable
         foreach (var file in files)
             stringBuilder.Append($"{file.Name}|");
 
-        foreach (var directory in subDirectories)
-            stringBuilder.Append($"{directory.Name}|");
+        for (int i = 0; i < subDirectories.Length; i++)
+        {
+            stringBuilder.Append((i == subDirectories.Length - 1)
+                ? $"{subDirectories[i].Name}"
+                : $"{subDirectories[i].Name}|"
+            );
+        }
+
 
         return stringBuilder.ToString();
     }

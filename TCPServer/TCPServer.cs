@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices.JavaScript;
 using System.Text;
 
 namespace TCPClientApp.Model;
@@ -25,17 +24,22 @@ public class TCPServer
     {
         TcpListener listener = new TcpListener(IPAddress.Any, startPort);
         listener.Start();
+        
         _logger.Log(" >> Server started!");
         while (true)
         {
             TcpClient client = await listener.AcceptTcpClientAsync();
             _logger.Log(" >> Client connected on port 8888");
+            
             Port port = FindFreePort();
             _logger.Log($" >> Found new port: {port.PortValue}");
+            
             await SendNewPort(client, port);
             _logger.Log($" >> Waiting for connection");
+            
             TcpClient cl = await WaitForConnection(port);
             _logger.Log($" >> Client connected on port {port.PortValue}");
+            
             port.Occupied = true;
             ClientHandler clientHandler = new ClientHandler(cl, _logger, port);
             clientHandler.Start();
@@ -62,8 +66,10 @@ public class TCPServer
     {
         TcpListener listener = new TcpListener(IPAddress.Any, port.PortValue);
         listener.Start();
+        
         TcpClient client = await listener.AcceptTcpClientAsync();
         listener.Stop();
+        
         _logger.Log($" >> Listener on port {port.PortValue} started!");
         return client;
     }
@@ -71,10 +77,8 @@ public class TCPServer
     private Port FindFreePort()
     {
         foreach (Port port in _ports)
-        {
             if (port.Occupied == false)
                 return port;
-        }
 
         throw new ApplicationException("There is no free port.");
     }
