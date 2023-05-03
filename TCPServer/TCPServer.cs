@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using TCPClientApp.Domain;
 
 namespace TCPClientApp.Model;
 
@@ -9,14 +10,11 @@ public class TCPServer
     private ILogger _logger;
     private Port[] _ports;
     private int startPort = 8888;
-    private byte portRequest = 6;
-
+    private int portsAmount = 1000;
     public TCPServer(ILogger logger)
     {
-        if (logger == null)
-            throw new ArgumentNullException(nameof(logger));
         _ports = new Port[1000];
-        _logger = logger;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         InitializePorts();
     }
 
@@ -29,8 +27,9 @@ public class TCPServer
         while (true)
         {
             TcpClient client = await listener.AcceptTcpClientAsync();
-            _logger.Log(" >> Client connected on port 8888");
             
+            _logger.Log($" >> Client {client.Client?.RemoteEndPoint} connected on port 8888");
+
             Port port = FindFreePort();
             _logger.Log($" >> Found new port: {port.PortValue}");
             
@@ -52,8 +51,8 @@ public class TCPServer
     {
         NetworkStream networkStream = client.GetStream();
         byte[] bytes = Encoding.UTF8.GetBytes($"{port.PortValue}"), responseBytes = new byte[bytes.Length + 1];
-        
-        responseBytes[0] = portRequest;
+
+        responseBytes[0] = (byte)RequestType.Port; 
         Array.Copy(bytes, 0, responseBytes, 1, bytes.Length);
         
         await networkStream.WriteAsync(responseBytes, 0, responseBytes.Length);
@@ -85,8 +84,8 @@ public class TCPServer
 
     private void InitializePorts()
     {
-        for (int i = 0; i < 1000; i++)
-            _ports[i] = new Port(8889 + i, false);
+        for (int i = 0; i < portsAmount; i++)
+            _ports[i] = new Port(startPort + 1 + i, false);
     }
 
     private void Disconnect(TcpClient client)

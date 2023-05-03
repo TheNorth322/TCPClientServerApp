@@ -17,13 +17,6 @@ public class TCPClient
     private TcpClient _clientSocket;
     private Thread ping;
     private NetworkStream _networkStream;
-    private byte directoryTreeRequest = 1;
-    private byte fileContentsRequest = 2;
-    private byte pingRequest = 3;
-    private byte exceptionRequest = 4;
-    private byte systemRequest = 5;
-    private byte portRequest = 6;
-    private byte disconnectRequest = 8;
     private int lastPingTime;
     private int pingTime = 5;
 
@@ -66,14 +59,12 @@ public class TCPClient
     {
         try
         {
-            byte[] request = new[] { pingRequest };
-            Console.WriteLine("ping");
+            byte[] request = new[] { (byte) RequestType.Ping };
             await _networkStream.WriteAsync(request);
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Disconnected");
             CloseSocket();
             return false;
         }
@@ -102,22 +93,22 @@ public class TCPClient
         byte[] buffer = new byte[1024 * 8];
         int bytesRead = await _networkStream.ReadAsync(buffer, 0, buffer.Length);
 
-        switch (buffer[0])
+        switch ((RequestType) buffer[0])
         {
-            case 1:
-                return new Response(ResponseType.DirectoryContents,
+            case RequestType.DirectoryContents:
+                return new Response(RequestType.DirectoryContents,
                     await GetStringResponseAsync(buffer, bytesRead));
-            case 2:
-                return new Response(ResponseType.FileContents,
+            case RequestType.FileContents:
+                return new Response(RequestType.FileContents,
                     await SaveFileAsync(buffer, bytesRead, message));
-            case 4:
-                return new Response(ResponseType.Exception,
+            case RequestType.Exception:
+                return new Response(RequestType.Exception,
                     await GetStringResponseAsync(buffer, bytesRead));
-            case 6:
-                return new Response(ResponseType.Port,
+            case RequestType.Port:
+                return new Response(RequestType.Port,
                     await GetStringResponseAsync(buffer, bytesRead));
-            case 7:
-                return new Response(ResponseType.Disks,
+            case RequestType.Disks:
+                return new Response(RequestType.Disks,
                     await GetStringResponseAsync(buffer, bytesRead));
             default:
                 throw new ApplicationException("Invalid signature!");
@@ -128,7 +119,7 @@ public class TCPClient
     {
         byte[] responseBuffer = new byte[8 * 1024];
         Array.Copy(buffer, 1, responseBuffer, 0, buffer.Length - 1);
-        string path = $"C:\\TCPClient\\Downloads\\{Path.GetFileName(request)}";
+        string path = $"{Environment.GetFolderPath(Environment.SpecialFolder.Desktop)}\\{Path.GetFileName(request)}";
         FileStream fileStream =
             new FileStream(path, FileMode.Create);
 
@@ -169,7 +160,7 @@ public class TCPClient
 
     public async Task DisconnectAsync()
     {
-        await _networkStream.WriteAsync(new[] { disconnectRequest }, 0, 1);
+        await _networkStream.WriteAsync(new[] { (byte) RequestType.Disconnect }, 0, 1);
         await _networkStream.FlushAsync();
         CloseSocket();
     }

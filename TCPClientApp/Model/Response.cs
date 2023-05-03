@@ -2,11 +2,11 @@
 
 public struct Response
 {
-    public ResponseType Type { get; }
+    public RequestType Type { get; }
     
     public string Contents { get; }
 
-    public Response(ResponseType type, string contents)
+    public Response(RequestType type, string contents)
     {
         Type = type;
         Contents = contents;

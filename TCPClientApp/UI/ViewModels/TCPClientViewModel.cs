@@ -166,16 +166,16 @@ public class TCPClientViewModel : ViewModelBase
 
             switch (response.Type)
             {
-                case ResponseType.DirectoryContents:
+                case RequestType.DirectoryContents:
                     ClientLog += $"Client received: {response.Contents}\n";
                     UpdateServerDirectoryContents(response.Contents.Split('|'));
                     UpdateAbsolutePath();
                     break;
-                case ResponseType.Disks:
+                case RequestType.Disks:
                     ClientLog += $"Client received: {response.Contents}\n";
                     UpdateServerDirectoryContents(response.Contents.Split('|'));
                     break;
-                case ResponseType.FileContents:
+                case RequestType.FileContents:
                     ClientLog += $"Client received: {response.Contents}\n";
                     break;
                 default:

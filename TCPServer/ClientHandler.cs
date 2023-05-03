@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using System.Text;
 using System;
+using TCPClientApp.Domain;
 
 namespace TCPClientApp.Model;
 
@@ -10,11 +11,6 @@ public class ClientHandler : IDisposable
     private ILogger _logger;
     private Port port;
     private NetworkStream _networkStream;
-    private byte directoryTreeRequest = 1;
-    private byte fileContentsRequest = 2;
-    private byte exceptionRequest = 4;
-    private byte disksRequest = 7;
-    private byte disconectRequest = 8;
 
     public ClientHandler(TcpClient client, ILogger logger, Port _port)
     {
@@ -75,20 +71,20 @@ public class ClientHandler : IDisposable
         request = request.Substring(1, request.Length - 1);
         try
         {
-            switch (type[0])
+            switch ((RequestType) type[0])
             {
-                case 1:
-                    await SendStringAsync(GetDirectoryContents(request), directoryTreeRequest);
+                case RequestType.DirectoryContents:
+                    await SendStringAsync(GetDirectoryContents(request), RequestType.DirectoryContents);
                     break;
-                case 2:
+                case RequestType.FileContents:
                     await SendFileContentsAsync(request);
                     break;
-                case 3:
+                case RequestType.Ping:
                     break;
-                case 7:
-                    await SendStringAsync(GetLogicalDrives(request), disksRequest);
+                case RequestType.Disks:
+                    await SendStringAsync(GetLogicalDrives(request), RequestType.Disks);
                     break;
-                case 8:
+                case RequestType.Disconnect:
                     Disconnect();
                     break;
                 default:
@@ -97,7 +93,7 @@ public class ClientHandler : IDisposable
         }
         catch (Exception ex)
         {
-            await SendStringAsync(ex.Message, exceptionRequest);
+            await SendStringAsync(ex.Message, RequestType.Exception);
         }
     }
 
@@ -105,7 +101,8 @@ public class ClientHandler : IDisposable
     {
         FileStream fileStream = new FileStream(request, FileMode.Open);
         byte[] buffer = new byte[1024 * 8];
-        buffer[0] = fileContentsRequest;
+        
+        buffer[0] = (byte) RequestType.FileContents;
         int bytesRead = await fileStream.ReadAsync(buffer, 1, buffer.Length - 1);
 
         await _networkStream.WriteAsync(buffer, 0, bytesRead + 1);
@@ -121,12 +118,12 @@ public class ClientHandler : IDisposable
         fileStream.Close();
     }
 
-    private async Task SendStringAsync(string response, byte type)
+    private async Task SendStringAsync(string response, RequestType type)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(response);
         byte[] responseBytes = new byte[bytes.Length + 1];
         _logger.Log($"Server sent: {response}");
-        responseBytes[0] = type;
+        responseBytes[0] = (byte) type;
         Array.Copy(bytes, 0, responseBytes, 1, bytes.Length);
 
         await _networkStream.WriteAsync(responseBytes, 0, responseBytes.Length);
